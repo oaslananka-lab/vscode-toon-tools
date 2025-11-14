@@ -1,0 +1,41 @@
+{
+  "scopeName": "source.toon",
+  "patterns": [
+    { "include": "#header" },
+    { "include": "#row" }
+  ],
+  "repository": {
+    "header": {
+      "patterns": [
+        {
+          "name": "entity.name.section.toon",
+          "match": "^[A-Za-z_][A-Za-z0-9_]*(?=\\[)"
+        },
+        {
+          "name": "constant.numeric.toon",
+          "match": "\\[(\\d+)\\]"
+        },
+        {
+          "name": "variable.other.member.toon",
+          "match": "\\{[^}]*\\}"
+        },
+        {
+          "name": "punctuation.separator.colon.toon",
+          "match": ":"
+        }
+      ]
+    },
+    "row": {
+      "patterns": [
+        {
+          "name": "meta.row.toon",
+          "match": "^\\s+.*$"
+        },
+        {
+          "name": "punctuation.separator.comma.toon",
+          "match": ","
+        }
+      ]
+    }
+  }
+}

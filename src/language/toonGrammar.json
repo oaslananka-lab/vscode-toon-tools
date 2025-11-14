@@ -1,0 +1,22 @@
+{
+  "scopeName": "source.toon",
+  "fileTypes": ["toon"],
+  "patterns": [
+    { "include": "#header" },
+    { "include": "#rows" }
+  ],
+  "repository": {
+    "header": {
+      "patterns": [
+        { "name": "entity.name.section.toon", "match": "^[A-Za-z_][\\w]*(?=\\[)" },
+        { "name": "constant.numeric.row-count.toon", "match": "\\[(\\d+)\\]" },
+        { "name": "variable.other.member.toon", "match": "(?<=\{)[^,}]+" }
+      ]
+    },
+    "rows": {
+      "patterns": [
+        { "name": "meta.row.toon", "match": "^\\s+.*$" }
+      ]
+    }
+  }
+}

@@ -1,0 +1,22 @@
+# Node / TypeScript artifacts
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Logs and diagnostics
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log
+
+# VS Code workspace state
+.vscode/*.code-workspace
+.vscode/*.user
+.history/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# VS Code extension packages
+*.vsix
