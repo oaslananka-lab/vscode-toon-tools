@@ -75,34 +75,9 @@ Use the fixtures in `test-fixtures/` after launching the Extension Development H
 - Open `sample.json` → run `TOON: Convert JSON to TOON` and `TOON: Open TOON Preview`; inspect converted text beside the JSON source.
 - Editing ergonomics → In a new `.toon`, trigger the `toon-table` snippet, accept completion suggestions, fold/unfold blocks, and use “Go to Symbol in File”.
 
-## GitHub Publishing Checklist
+## Publishing
 
-```bash
-git init
-git add .
-git commit -m "Initial TOON VS Code extension"
-git branch -M main
-git remote add origin git@github.com/oaslananka/vscode-toon-tools.git
-# or
-# git remote add origin https://github.com/oaslananka/vscode-toon-tools.git
-git push -u origin main
-```
-
-## VS Code Marketplace (Placeholder)
-
-1. Install `vsce` and ensure `publisher` is `oaslananka`.
-2. Create a Personal Access Token with the `Marketplace` scope.
-3. Package locally:
-
-   ```bash
-   vsce package
-   ```
-
-4. Publish once credentials are configured:
-
-   ```bash
-   vsce publish
-   ```
+See `docs/publishing.md` for the GitHub workflow (init, branch, push) and the placeholder VS Code Marketplace steps (packaging and publishing with `vsce`).
 
 ## Release Notes
 

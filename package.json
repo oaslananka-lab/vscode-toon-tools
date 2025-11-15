@@ -1,79 +1,103 @@
 {
-  "name": "vscode-toon-tools",
-  "displayName": "TOON Tools",
-  "publisher": "oaslananka",
-  "description": "TOON format support for VS Code: syntax highlighting, formatter, linter, JSON↔TOON conversion, previews, and analyzers.",
-  "version": "0.1.0",
-  "license": "MIT",
-  "engines": {
-    "vscode": "^1.90.0"
-  },
-  "categories": [
-    "Programming Languages",
-    "Formatters",
-    "Linters"
-  ],
-  "keywords": [
-    "toon",
-    "token oriented object notation",
-    "formatter",
-    "linter",
-    "json",
-    "vscode-extension"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/oaslananka/vscode-toon-tools.git"
-  },
-  "bugs": {
-    "url": "https://github.com/oaslananka/vscode-toon-tools/issues"
-  },
-  "homepage": "https://github.com/oaslananka/vscode-toon-tools#readme",
-  "main": "./dist/extension.js",
-  "contributes": {
-    "languages": [
-      {
-        "id": "toon",
-        "aliases": ["TOON", "toon"],
-        "extensions": [".toon"],
-        "configuration": "./language-configuration.json",
-        "icon": {
-          "light": "./icons/toon-file-light.svg",
-          "dark": "./icons/toon-file-dark.svg"
-        }
-      }
+    "name": "vscode-toon-tools",
+    "displayName": "TOON Tools",
+    "publisher": "oaslananka",
+    "icon": "images/toon-tools-icon.png",
+    "description": "TOON format support for VS Code: syntax highlighting, formatter, linter, JSON↔TOON conversion, previews, and analyzers.",
+    "version": "0.1.0",
+    "license": "MIT",
+    "engines": {
+        "vscode": "^1.90.0"
+    },
+    "categories": [
+        "Programming Languages",
+        "Formatters",
+        "Linters"
     ],
-    "grammars": [
-      {
-        "language": "toon",
-        "scopeName": "source.toon",
-        "path": "./syntaxes/toon.tmLanguage.json"
-      }
+    "keywords": [
+        "toon",
+        "token oriented object notation",
+        "formatter",
+        "linter",
+        "json",
+        "vscode-extension"
     ],
-    "snippets": [
-      {
-        "language": "toon",
-        "path": "./snippets/toon.code-snippets"
-      }
-    ],
-    "commands": [
-      { "command": "toon.convertJsonToToon", "title": "TOON: Convert JSON to TOON" },
-      { "command": "toon.convertToonToJson", "title": "TOON: Convert TOON to JSON" },
-      { "command": "toon.openJsonPreview", "title": "TOON: Open JSON Preview" },
-      { "command": "toon.openToonPreview", "title": "TOON: Open TOON Preview" },
-      { "command": "toon.openTableViewer", "title": "TOON: Open Table Viewer" },
-      { "command": "toon.analyzeSizeTokens", "title": "TOON: Analyze Size / Tokens" }
-    ]
-  },
-  "scripts": {
-    "vscode:prepublish": "npm run build",
-    "build": "tsc -p ./",
-    "watch": "tsc -watch -p ./"
-  },
-  "devDependencies": {
-    "typescript": "^5.0.0",
-    "@types/node": "^20.0.0",
-    "@types/vscode": "^1.90.0"
-  },
-  "dependencies": {}
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/oaslananka/vscode-toon-tools.git"
+    },
+    "bugs": {
+        "url": "https://github.com/oaslananka/vscode-toon-tools/issues"
+    },
+    "homepage": "https://github.com/oaslananka/vscode-toon-tools#readme",
+    "main": "./dist/extension.js",
+    "contributes": {
+        "languages": [
+            {
+                "id": "toon",
+                "aliases": [
+                    "TOON",
+                    "toon"
+                ],
+                "extensions": [
+                    ".toon"
+                ],
+                "configuration": "./language-configuration.json",
+                "icon": {
+                    "light": "./icons/toon-file-light.svg",
+                    "dark": "./icons/toon-file-dark.svg"
+                }
+            }
+        ],
+        "grammars": [
+            {
+                "language": "toon",
+                "scopeName": "source.toon",
+                "path": "./syntaxes/toon.tmLanguage.json"
+            }
+        ],
+        "snippets": [
+            {
+                "language": "toon",
+                "path": "./snippets/toon.code-snippets"
+            }
+        ],
+        "commands": [
+            {
+                "command": "toon.convertJsonToToon",
+                "title": "TOON: Convert JSON to TOON"
+            },
+            {
+                "command": "toon.convertToonToJson",
+                "title": "TOON: Convert TOON to JSON"
+            },
+            {
+                "command": "toon.openJsonPreview",
+                "title": "TOON: Open JSON Preview"
+            },
+            {
+                "command": "toon.openToonPreview",
+                "title": "TOON: Open TOON Preview"
+            },
+            {
+                "command": "toon.openTableViewer",
+                "title": "TOON: Open Table Viewer"
+            },
+            {
+                "command": "toon.analyzeSizeTokens",
+                "title": "TOON: Analyze Size / Tokens"
+            }
+        ]
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run build",
+        "build": "tsc -p ./",
+        "watch": "tsc -watch -p ./"
+    },
+    "devDependencies": {
+        "typescript": "^5.0.0",
+        "@types/node": "^20.0.0",
+        "@types/vscode": "^1.90.0"
+    },
+    "dependencies": {}
 }
