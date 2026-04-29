@@ -43,6 +43,9 @@ jobs:
         run: |
           curl -Os https://uploader.codecov.io/latest/linux/codecov
           chmod +x codecov
-          CODECOV_TOKEN=$(doppler secrets get CODECOV_TOKEN --plain --project vscode-toon-tools --config main)
-          ./codecov -f coverage/lcov.info -t "$CODECOV_TOKEN"
+          if CODECOV_TOKEN=$(doppler secrets get CODECOV_TOKEN --plain --project vscode-toon-tools --config main); then
+            ./codecov -f coverage/lcov.info -t "$CODECOV_TOKEN"
+          else
+            echo "Codecov upload skipped: CODECOV_TOKEN is not available in Doppler."
+          fi
         shell: bash
