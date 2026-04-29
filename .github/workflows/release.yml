@@ -80,7 +80,9 @@ jobs:
           assets=()
           compgen -G "*.vsix" > /dev/null && assets+=(*.vsix)
 
-          release_id="$(gh api "repos/$repo/releases/tags/$RELEASE_TAG" --jq '.id' 2>/dev/null || true)"
+          if ! release_id="$(gh api "repos/$repo/releases/tags/$RELEASE_TAG" --jq '.id' 2>/dev/null)"; then
+            release_id=""
+          fi
           if [ -z "$release_id" ]; then
             gh api -X POST "repos/$repo/releases" \
               -f tag_name="$RELEASE_TAG" \
