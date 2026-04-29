@@ -50,7 +50,7 @@ jobs:
       - run: npm exec -- task package
       - name: Attest build provenance
         if: hashFiles('*.vsix') != ''
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: '*.vsix'
       - name: Install Doppler CLI
