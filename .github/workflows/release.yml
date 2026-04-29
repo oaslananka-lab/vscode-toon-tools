@@ -55,7 +55,7 @@ jobs:
           subject-path: '*.vsix'
       - name: Install Doppler CLI
         if: inputs.publish == 'true'
-        uses: dopplerhq/cli-action@v3
+        uses: dopplerhq/cli-action@v4
       - name: Verify Doppler secrets
         if: inputs.publish == 'true'
         env:
