@@ -33,30 +33,39 @@ export function blocksToJsonObject(blocks: ToonBlock[]): Record<string, unknown>
   return result;
 }
 
+/**
+ * Converts a named TOON block to CSV format.
+ * Returns null if the block name is not found.
+ */
+export function toonBlockToCsv(text: string, blockName: string): string | null {
+  const blocks = parseToonBlocks(text);
+  const block = blocks.find((candidate) => candidate.name === blockName);
+  if (!block) {
+    return null;
+  }
+
+  const header = block.fields.map(escapeCsv).join(',');
+  const rows = block.rows.map((row) => row.values.map(escapeCsv).join(','));
+  return [header, ...rows].join('\n');
+}
+
 function normalizeJsonToBlocks(input: unknown, defaultName: string): JsonBlock[] {
   if (Array.isArray(input)) {
     return [
       {
         name: defaultName,
-        rows: ensureRowsOfObjects(input, 'root array')
-      }
+        rows: ensureRowsOfObjects(input, 'root array'),
+      },
     ];
   }
 
   if (isPlainObject(input)) {
-    const entries = Object.entries(input as Record<string, unknown>);
-    const blocks: JsonBlock[] = entries
+    const blocks = Object.entries(input as Record<string, unknown>)
       .filter(([, value]) => Array.isArray(value))
       .map(([name, value]) => ({ name, rows: ensureRowsOfObjects(value as unknown[], name) }));
 
     if (blocks.length > 0) {
       return blocks;
-    }
-
-    const firstArrayEntry = entries.find(([, value]) => Array.isArray(value));
-    if (firstArrayEntry) {
-      const [name, value] = firstArrayEntry;
-      return [{ name, rows: ensureRowsOfObjects(value as unknown[], name) }];
     }
   }
 
@@ -107,10 +116,20 @@ function formatValue(value: unknown): string {
   if (value === null || value === undefined) {
     return '';
   }
-  if (typeof value === 'object') {
-    return JSON.stringify(value);
-  }
-  return String(value).replace(/\r?\n/g, ' ');
+  const text = typeof value === 'object' ? JSON.stringify(value) : String(value);
+  return quoteToonValue(text.replace(/\r?\n/g, ' '));
+}
+
+function quoteToonValue(value: string): string {
+  return value.includes(',') || value.includes('"') || /^\s|\s$/.test(value)
+    ? `"${value.replace(/"/g, '""')}"`
+    : value;
+}
+
+function escapeCsv(value: string): string {
+  return value.includes(',') || value.includes('"') || value.includes('\n')
+    ? `"${value.replace(/"/g, '""')}"`
+    : value;
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

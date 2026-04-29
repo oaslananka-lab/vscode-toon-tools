@@ -1,0 +1,25 @@
+name: Branch Cleanup
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.repository == 'oaslananka-LAB/vscode-toon-tools' && github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const head = context.payload.pull_request.head;
+            if (head.repo.full_name !== context.payload.repository.full_name) return;
+            if (['main', 'develop'].includes(head.ref) || head.ref.startsWith('release/')) return;
+            await github.rest.git.deleteRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `heads/${head.ref}`
+            });

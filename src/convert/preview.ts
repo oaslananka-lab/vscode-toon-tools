@@ -39,6 +39,6 @@ async function openInSideDocument(content: string, language: string): Promise<vo
   const doc = await vscode.workspace.openTextDocument({ content, language });
   await vscode.window.showTextDocument(doc, {
     preview: true,
-    viewColumn: vscode.ViewColumn.Beside
+    viewColumn: vscode.ViewColumn.Beside,
   });
 }

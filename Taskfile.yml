@@ -1,0 +1,74 @@
+version: '3'
+
+tasks:
+  install:
+    desc: Deterministic dependency install
+    cmds: [npm ci]
+
+  format:check:
+    desc: Check formatting
+    cmds: [npm run format:check]
+
+  format:fix:
+    desc: Auto-fix formatting
+    cmds: [npm run format]
+
+  lint:
+    desc: ESLint + format check
+    cmds:
+      - task: format:check
+      - npm run lint
+
+  typecheck:
+    desc: TypeScript type-check
+    cmds: [npm run typecheck]
+
+  test:unit:
+    desc: Run unit tests
+    cmds: [npm run test:unit]
+
+  test:unit:coverage:
+    desc: Unit tests with coverage
+    cmds: [npm run test:unit:coverage]
+
+  test:integration:
+    desc: VS Code integration tests
+    cmds: [npm run test:integration]
+
+  build:
+    desc: Production webpack build
+    cmds: [npm run build]
+
+  package:
+    desc: Package VSIX
+    cmds: [npm run package]
+
+  audit:ci:
+    desc: Security audit (high+)
+    cmds: [npm run audit:ci]
+
+  pre-push:
+    desc: Local pre-push gate
+    cmds:
+      - task: lint
+      - task: typecheck
+      - task: test:unit
+      - task: audit:ci
+
+  ci:
+    desc: Full CI pipeline
+    cmds:
+      - task: lint
+      - task: typecheck
+      - task: test:unit:coverage
+      - task: build
+      - task: package
+      - task: audit:ci
+
+  publish:
+    desc: Publish to both marketplaces
+    cmds: [bash scripts/publish.sh]
+
+  sync:
+    desc: Push to all remotes
+    cmds: [bash scripts/sync-remotes.sh]

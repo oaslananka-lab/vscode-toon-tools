@@ -2,20 +2,28 @@ import * as vscode from 'vscode';
 import { parseToonBlocks } from '../parser/toonParser';
 import { ToonBlock } from '../parser/toonTypes';
 
+export interface FormatToonOptions {
+  indentWidth?: 2 | 4;
+  fieldSpacing?: 'compact' | 'spaced';
+}
+
 export class ToonFormattingProvider implements vscode.DocumentFormattingEditProvider {
   provideDocumentFormattingEdits(document: vscode.TextDocument): vscode.TextEdit[] {
     if (document.lineCount === 0) {
       return [];
     }
 
+    const config = vscode.workspace.getConfiguration('toon');
+    const indentWidth = config.get<2 | 4>('formatter.indentWidth', 2);
+    const fieldSpacing = config.get<'compact' | 'spaced'>('formatter.fieldSpacing', 'compact');
     const lastLine = document.lineAt(document.lineCount - 1);
     const fullRange = new vscode.Range(0, 0, document.lineCount - 1, lastLine.text.length);
-    const formatted = formatToonDocument(document.getText());
+    const formatted = formatToonDocument(document.getText(), { indentWidth, fieldSpacing });
     return [vscode.TextEdit.replace(fullRange, formatted)];
   }
 }
 
-export function formatToonDocument(text: string): string {
+export function formatToonDocument(text: string, options: FormatToonOptions = {}): string {
   const blocks = parseToonBlocks(text);
   if (blocks.length === 0) {
     return text.trimEnd();
@@ -32,19 +40,22 @@ export function formatToonDocument(text: string): string {
   while (currentLine < lines.length) {
     const block = blockByHeader.get(currentLine);
     if (block) {
-      if (lastSegmentWasBlock && formattedLines.length > 0 && formattedLines[formattedLines.length - 1] !== '') {
+      if (lastSegmentWasBlock && formattedLines.length > 0 && lastValue(formattedLines) !== '') {
         formattedLines.push('');
       }
 
-      const normalized = formatBlock(block).split('\n');
-      formattedLines.push(...normalized);
-
+      formattedLines.push(...formatBlock(block, options).split('\n'));
       lastSegmentWasBlock = true;
       currentLine = Math.max(block.bodyEndLine, block.headerLine) + 1;
       continue;
     }
 
-    formattedLines.push(lines[currentLine]);
+    const trimmed = lines[currentLine].trim();
+    if (trimmed.startsWith('#') || !trimmed) {
+      formattedLines.push(lines[currentLine].trimEnd());
+    } else {
+      formattedLines.push(lines[currentLine]);
+    }
     lastSegmentWasBlock = false;
     currentLine += 1;
   }
@@ -52,8 +63,14 @@ export function formatToonDocument(text: string): string {
   return formattedLines.join('\n').trimEnd();
 }
 
-function formatBlock(block: ToonBlock): string {
-  const header = `${block.name}[${block.rowCountDeclared}]{${block.fields.join(',')}}:`;
-  const body = block.rows.map((row) => `  ${row.values.join(',')}`).join('\n');
+function formatBlock(block: ToonBlock, options: FormatToonOptions): string {
+  const indent = ' '.repeat(options.indentWidth ?? 2);
+  const separator = options.fieldSpacing === 'spaced' ? ', ' : ',';
+  const header = `${block.name}[${block.rowCountDeclared}]{${block.fields.join(separator)}}:`;
+  const body = block.rows.map((row) => `${indent}${row.values.join(',')}`).join('\n');
   return body ? `${header}\n${body}` : header;
+}
+
+function lastValue(values: string[]): string | undefined {
+  return values[values.length - 1];
 }

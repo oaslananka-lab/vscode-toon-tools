@@ -1,7 +1,14 @@
 import * as vscode from 'vscode';
+import { toonBlockToCsv } from '../convert/codec';
 import { parseToonBlocks } from '../parser/toonParser';
+import { generateNonce } from '../utils/nonce';
 
-export async function openTableViewerCommand(): Promise<void> {
+interface TableMessage {
+  command?: string;
+  blockName?: string;
+}
+
+export async function openTableViewerCommand(context: vscode.ExtensionContext): Promise<void> {
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
     vscode.window.showErrorMessage('No active TOON document to view.');
@@ -9,7 +16,8 @@ export async function openTableViewerCommand(): Promise<void> {
   }
 
   try {
-    const blocks = parseToonBlocks(editor.document.getText());
+    const sourceText = editor.document.getText();
+    const blocks = parseToonBlocks(sourceText);
     if (blocks.length === 0) {
       vscode.window.showInformationMessage('No TOON blocks found to display.');
       return;
@@ -19,144 +27,94 @@ export async function openTableViewerCommand(): Promise<void> {
       'toonTableViewer',
       'TOON Table Viewer',
       vscode.ViewColumn.Beside,
-      { enableScripts: true }
+      {
+        enableScripts: true,
+        localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'media')],
+      }
     );
 
-    panel.webview.html = getWebviewHtml(blocks);
+    panel.webview.html = getWebviewHtml(panel.webview, context, blocks);
+    context.subscriptions.push(
+      panel.webview.onDidReceiveMessage(async (message: TableMessage) => {
+        if (message.command !== 'exportCsv' || !message.blockName) {
+          return;
+        }
+
+        const csv = toonBlockToCsv(sourceText, message.blockName);
+        if (!csv) {
+          vscode.window.showErrorMessage(`Block '${message.blockName}' not found.`);
+          return;
+        }
+
+        const uri = await vscode.window.showSaveDialog({
+          filters: { CSV: ['csv'] },
+          defaultUri: vscode.Uri.file(`${message.blockName}.csv`),
+        });
+        if (!uri) {
+          return;
+        }
+
+        await vscode.workspace.fs.writeFile(uri, Buffer.from(csv, 'utf-8'));
+        vscode.window.showInformationMessage(`Exported '${message.blockName}' to ${uri.fsPath}`);
+      })
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     vscode.window.showErrorMessage(`Failed to open TOON Table Viewer: ${message}`);
   }
 }
 
-function getWebviewHtml(blocks: ReturnType<typeof parseToonBlocks>): string {
+function getWebviewHtml(
+  webview: vscode.Webview,
+  context: vscode.ExtensionContext,
+  blocks: ReturnType<typeof parseToonBlocks>
+): string {
   const payload = blocks.map((block) => ({
     name: block.name,
+    declaredRows: block.rowCountDeclared,
     fields: block.fields,
-    rows: block.rows.map((row) => row.values)
+    rows: block.rows.map((row) => row.values),
   }));
   const data = JSON.stringify(payload).replace(/</g, '\\u003c');
-  const nonce = createNonce();
+  const nonce = generateNonce();
+  const resetUri = webview.asWebviewUri(
+    vscode.Uri.joinPath(context.extensionUri, 'media', 'reset.css')
+  );
+  const styleUri = webview.asWebviewUri(
+    vscode.Uri.joinPath(context.extensionUri, 'media', 'tableViewer.css')
+  );
+  const scriptUri = webview.asWebviewUri(
+    vscode.Uri.joinPath(context.extensionUri, 'media', 'tableViewer.js')
+  );
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}';" />
-<style nonce="${nonce}">
-  body { font-family: Segoe UI, sans-serif; margin: 0; padding: 16px; }
-  header { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
-  select, input { padding: 6px; }
-  table { border-collapse: collapse; width: 100%; }
-  th, td { border: 1px solid #ccc; padding: 6px 8px; }
-  th { cursor: pointer; background: #f3f3f3; }
-  tbody tr:nth-child(even) { background: #fafafa; }
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https:; style-src ${webview.cspSource}; script-src 'nonce-${nonce}' ${webview.cspSource};" />
+<link rel="stylesheet" href="${resetUri}" />
+<link rel="stylesheet" href="${styleUri}" />
+<title>TOON Table Viewer</title>
 </head>
 <body>
-  <header>
-    <label>Block:
-      <select id="blockSelect"></select>
-    </label>
-    <label>Filter:
-      <input id="filter" type="text" placeholder="Contains..." />
-    </label>
-  </header>
-  <div id="table"></div>
-  <script nonce="${nonce}">
-    const data = ${data};
-    const select = document.getElementById('blockSelect');
-    const filterInput = document.getElementById('filter');
-    const tableContainer = document.getElementById('table');
-    const sort = { index: 0, asc: true };
-
-    function init() {
-      data.forEach((block, index) => {
-        const option = document.createElement('option');
-        option.value = String(index);
-        option.textContent = block.name;
-        select.appendChild(option);
-      });
-      select.addEventListener('change', render);
-      filterInput.addEventListener('input', render);
-      select.value = '0';
-      render();
-    }
-
-    function render() {
-      const blockIndex = Number(select.value) || 0;
-      const block = data[blockIndex];
-      if (!block) {
-        tableContainer.textContent = 'No block selected';
-        return;
-      }
-
-      const filter = filterInput.value.toLowerCase();
-      const filteredRows = block.rows.filter((row) =>
-        row.some((value) => String(value ?? '').toLowerCase().includes(filter))
-      );
-
-      const sortedRows = [...filteredRows].sort((a, b) => {
-        const av = String(a[sort.index] ?? '').toLowerCase();
-        const bv = String(b[sort.index] ?? '').toLowerCase();
-        if (av === bv) {
-          return 0;
-        }
-        return sort.asc ? av.localeCompare(bv) : bv.localeCompare(av);
-      });
-
-      const table = document.createElement('table');
-      const thead = document.createElement('thead');
-      const headerRow = document.createElement('tr');
-
-      block.fields.forEach((field, index) => {
-        const th = document.createElement('th');
-        th.textContent = field || 'Field ' + (index + 1);
-        th.addEventListener('click', () => {
-          if (sort.index === index) {
-            sort.asc = !sort.asc;
-          } else {
-            sort.index = index;
-            sort.asc = true;
-          }
-          render();
-        });
-        headerRow.appendChild(th);
-      });
-
-      thead.appendChild(headerRow);
-      const tbody = document.createElement('tbody');
-      if (sortedRows.length === 0) {
-        const emptyRow = document.createElement('tr');
-        const cell = document.createElement('td');
-        cell.colSpan = Math.max(1, block.fields.length);
-        cell.textContent = 'No rows match the current filter.';
-        emptyRow.appendChild(cell);
-        tbody.appendChild(emptyRow);
-      } else {
-        sortedRows.forEach((row) => {
-          const tr = document.createElement('tr');
-          block.fields.forEach((_, index) => {
-            const td = document.createElement('td');
-            td.textContent = String(row[index] ?? '');
-            tr.appendChild(td);
-          });
-          tbody.appendChild(tr);
-        });
-      }
-
-      table.appendChild(thead);
-      table.appendChild(tbody);
-      tableContainer.innerHTML = '';
-      tableContainer.appendChild(table);
-    }
-
-    init();
-  </script>
+  <main class="toon-shell">
+    <section class="toon-toolbar" aria-label="Table controls">
+      <label class="toon-control">
+        <span>Block</span>
+        <select id="blockSelect" class="toon-select"></select>
+      </label>
+      <label class="toon-control toon-control-grow">
+        <span>Filter</span>
+        <input id="filter" class="toon-filter" type="search" placeholder="Filter rows" />
+      </label>
+      <button id="exportCsv" class="toon-btn" type="button">Export CSV</button>
+    </section>
+    <section id="summary" class="toon-summary" aria-live="polite"></section>
+    <section id="table" class="toon-table-wrap" aria-live="polite"></section>
+  </main>
+  <script nonce="${nonce}">window.__TOON_TABLE_DATA__ = ${data};</script>
+  <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
-}
-
-function createNonce(): string {
-  return Math.random().toString(36).slice(2, 15);
 }

@@ -6,12 +6,13 @@ export class ToonFoldingProvider implements vscode.FoldingRangeProvider {
     const blocks = parseToonBlocks(document.getText());
     return blocks
       .filter((block) => block.bodyEndLine > block.headerLine)
-      .map((block) =>
-        new vscode.FoldingRange(
-          block.headerLine,
-          Math.max(block.bodyEndLine, block.headerLine),
-          vscode.FoldingRangeKind.Region
-        )
+      .map(
+        (block) =>
+          new vscode.FoldingRange(
+            block.headerLine,
+            Math.max(block.bodyEndLine, block.headerLine),
+            vscode.FoldingRangeKind.Region
+          )
       );
   }
 }

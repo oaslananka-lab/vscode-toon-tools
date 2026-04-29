@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { toonToJsonSimple } from '../convert/codec';
+import { generateNonce } from '../utils/nonce';
 
-export async function openSizeAnalyzerCommand(): Promise<void> {
+export async function openSizeAnalyzerCommand(context: vscode.ExtensionContext): Promise<void> {
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
     vscode.window.showErrorMessage('No active TOON document to analyze.');
@@ -10,12 +11,12 @@ export async function openSizeAnalyzerCommand(): Promise<void> {
 
   try {
     const toonText = editor.document.getText();
-    const toonLength = toonText.length;
+    const toonLength = Buffer.byteLength(toonText, 'utf-8');
     const toonLines = editor.document.lineCount;
 
     const jsonValue = toonToJsonSimple(toonText);
     const jsonString = JSON.stringify(jsonValue, null, 2);
-    const jsonLength = jsonString.length;
+    const jsonLength = Buffer.byteLength(jsonString, 'utf-8');
     const jsonLines = jsonString.split(/\r?\n/).length;
 
     const savings = jsonLength > 0 ? 1 - toonLength / jsonLength : 0;
@@ -26,17 +27,20 @@ export async function openSizeAnalyzerCommand(): Promise<void> {
       'toonSizeAnalyzer',
       'TOON Size Analyzer',
       vscode.ViewColumn.Beside,
-      { enableScripts: false }
+      {
+        enableScripts: false,
+        localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'media')],
+      }
     );
 
-    panel.webview.html = getHtml({
+    panel.webview.html = getHtml(panel.webview, context, {
       toonLength,
       jsonLength,
       toonLines,
       jsonLines,
       savings,
       toonTokens,
-      jsonTokens
+      jsonTokens,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -58,40 +62,67 @@ interface AnalyzerStats {
   jsonTokens: number;
 }
 
-function getHtml(stats: AnalyzerStats): string {
-  const percent = (stats.savings * 100).toFixed(1);
-  const nonce = createNonce();
-  const comparison = stats.jsonLength > 0 ? `${percent}%` : 'n/a';
+function getHtml(
+  webview: vscode.Webview,
+  context: vscode.ExtensionContext,
+  stats: AnalyzerStats
+): string {
+  const nonce = generateNonce();
+  const resetUri = webview.asWebviewUri(
+    vscode.Uri.joinPath(context.extensionUri, 'media', 'reset.css')
+  );
+  const styleUri = webview.asWebviewUri(
+    vscode.Uri.joinPath(context.extensionUri, 'media', 'sizeAnalyzer.css')
+  );
+  const comparison = stats.jsonLength > 0 ? `${(stats.savings * 100).toFixed(1)}%` : 'n/a';
+  const maxLength = Math.max(stats.toonLength, stats.jsonLength, 1);
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'nonce-${nonce}';" />
-<style nonce="${nonce}">
-  body { font-family: Segoe UI, sans-serif; padding: 16px; line-height: 1.5; }
-  h1 { font-size: 1.4rem; margin-bottom: 1rem; }
-  table { border-collapse: collapse; width: 100%; max-width: 520px; }
-  th, td { text-align: left; padding: 8px; border-bottom: 1px solid #ddd; }
-  .highlight { font-weight: 600; }
-  .note { margin-top: 1rem; font-size: 0.9rem; color: #555; }
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';" />
+<link rel="stylesheet" href="${resetUri}" />
+<link rel="stylesheet" href="${styleUri}" />
+<title>TOON Size Analyzer</title>
 </head>
 <body>
-  <h1>TOON Size / Token Analysis</h1>
-  <table>
-    <tr><th>TOON length (chars)</th><td class="highlight">${stats.toonLength}</td></tr>
-    <tr><th>JSON length (chars)</th><td>${stats.jsonLength}</td></tr>
-    <tr><th>TOON lines</th><td>${stats.toonLines}</td></tr>
-    <tr><th>JSON lines</th><td>${stats.jsonLines}</td></tr>
-    <tr><th>Approx. TOON tokens</th><td>${stats.toonTokens}</td></tr>
-    <tr><th>Approx. JSON tokens</th><td>${stats.jsonTokens}</td></tr>
-    <tr><th>Estimated savings</th><td>${comparison}</td></tr>
-  </table>
-  <p class="note">Token counts use a simple chars/4 heuristic for a quick approximation.</p>
+  <main class="size-shell">
+    <header class="size-header">
+      <h1>Size / Token Analysis</h1>
+      <p>Estimated savings: <strong>${escapeHtml(comparison)}</strong></p>
+    </header>
+    <section class="comparison" aria-label="TOON and JSON size comparison">
+      <div class="bar-row">
+        <span>TOON</span>
+        <meter class="size-meter toon" min="0" max="${maxLength}" value="${stats.toonLength}"></meter>
+        <strong>${stats.toonLength} bytes</strong>
+      </div>
+      <div class="bar-row">
+        <span>JSON</span>
+        <meter class="size-meter json" min="0" max="${maxLength}" value="${stats.jsonLength}"></meter>
+        <strong>${stats.jsonLength} bytes</strong>
+      </div>
+    </section>
+    <table class="stats">
+      <tr><th>TOON length</th><td>${stats.toonLength} bytes</td></tr>
+      <tr><th>JSON length</th><td>${stats.jsonLength} bytes</td></tr>
+      <tr><th>TOON lines</th><td>${stats.toonLines}</td></tr>
+      <tr><th>JSON lines</th><td>${stats.jsonLines}</td></tr>
+      <tr><th>Approx. TOON tokens</th><td>${stats.toonTokens}</td></tr>
+      <tr><th>Approx. JSON tokens</th><td>${stats.jsonTokens}</td></tr>
+    </table>
+    <p class="note">Token counts use a chars/4 heuristic for quick budgeting.</p>
+  </main>
 </body>
 </html>`;
 }
 
-function createNonce(): string {
-  return Math.random().toString(36).slice(2, 15);
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }

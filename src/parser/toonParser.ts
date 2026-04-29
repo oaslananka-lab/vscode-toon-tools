@@ -1,6 +1,6 @@
 import { ToonBlock, ToonRow } from './toonTypes';
 
-const HEADER_REGEX = /^(\w+)\[(\d+)\]\{([^}]*)\}:\s*$/;
+const HEADER_REGEX = /^([A-Za-z_][A-Za-z0-9_]*)\[(\d+)\]\{([^}]*)\}:\s*$/;
 
 interface HeaderParseResult {
   name: string;
@@ -27,6 +27,11 @@ export function parseToonBlocks(text: string): ToonBlock[] {
   };
 
   lines.forEach((lineText, lineNumber) => {
+    const trimmed = lineText.trim();
+    if (!trimmed || trimmed.startsWith('#')) {
+      return;
+    }
+
     const header = tryParseHeader(lineText);
     if (header) {
       pushCurrent();
@@ -37,7 +42,7 @@ export function parseToonBlocks(text: string): ToonBlock[] {
         headerLine: lineNumber,
         bodyStartLine: -1,
         bodyEndLine: -1,
-        rows: []
+        rows: [],
       };
       return;
     }
@@ -46,15 +51,9 @@ export function parseToonBlocks(text: string): ToonBlock[] {
       return;
     }
 
-    const trimmed = lineText.trim();
-    if (!trimmed) {
-      return;
-    }
-
-    const values = trimmed.split(',').map((value) => value.trim());
     const row: ToonRow = {
       line: lineNumber,
-      values
+      values: parseToonValues(trimmed),
     };
     currentBlock.rows.push(row);
     if (currentBlock.bodyStartLine === -1) {
@@ -67,6 +66,37 @@ export function parseToonBlocks(text: string): ToonBlock[] {
   return blocks;
 }
 
+export function parseToonValues(source: string): string[] {
+  const values: string[] = [];
+  let current = '';
+  let inQuote = false;
+
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+
+    if (char === '"') {
+      if (inQuote && source[index + 1] === '"') {
+        current += '"';
+        index += 1;
+        continue;
+      }
+      inQuote = !inQuote;
+      continue;
+    }
+
+    if (char === ',' && !inQuote) {
+      values.push(current.trim());
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  values.push(current.trim());
+  return values;
+}
+
 function tryParseHeader(lineText: string): HeaderParseResult | undefined {
   const match = HEADER_REGEX.exec(lineText.trim());
   if (!match) {
@@ -74,11 +104,10 @@ function tryParseHeader(lineText: string): HeaderParseResult | undefined {
   }
 
   const [, name, rowCount, fieldsSection] = match;
-  const fields = splitFields(fieldsSection);
   return {
     name,
     rowCountDeclared: Number.parseInt(rowCount, 10),
-    fields
+    fields: splitFields(fieldsSection),
   };
 }
 

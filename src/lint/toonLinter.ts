@@ -3,7 +3,6 @@ import { parseToonBlocks } from '../parser/toonParser';
 import { ToonBlock, ToonDiagnostic, ToonDiagnosticSeverity } from '../parser/toonTypes';
 
 const LANGUAGE_ID = 'toon';
-const DEBOUNCE_MS = 300;
 
 export function registerToonLinter(
   collection: vscode.DiagnosticCollection,
@@ -16,16 +15,23 @@ export function registerToonLinter(
       return;
     }
 
+    const config = vscode.workspace.getConfiguration('toon');
+    if (!config.get<boolean>('linter.enabled', true)) {
+      collection.delete(document.uri);
+      return;
+    }
+
     const key = document.uri.toString();
     const pending = timers.get(key);
     if (pending) {
       clearTimeout(pending);
     }
 
+    const delay = config.get<number>('linter.debounceMs', 300);
     const handle = setTimeout(() => {
       timers.delete(key);
       lintDocument(document, collection);
-    }, DEBOUNCE_MS);
+    }, delay);
     timers.set(key, handle);
   };
 
@@ -33,6 +39,11 @@ export function registerToonLinter(
     vscode.workspace.onDidOpenTextDocument(schedule),
     vscode.workspace.onDidChangeTextDocument((event) => schedule(event.document)),
     vscode.workspace.onDidCloseTextDocument((document) => {
+      const pending = timers.get(document.uri.toString());
+      if (pending) {
+        clearTimeout(pending);
+      }
+      timers.delete(document.uri.toString());
       if (document.languageId === LANGUAGE_ID) {
         collection.delete(document.uri);
       }
@@ -42,12 +53,15 @@ export function registerToonLinter(
   vscode.workspace.textDocuments.forEach(schedule);
 }
 
-function lintDocument(document: vscode.TextDocument, collection: vscode.DiagnosticCollection): void {
+function lintDocument(
+  document: vscode.TextDocument,
+  collection: vscode.DiagnosticCollection
+): void {
   try {
     const blocks = parseToonBlocks(document.getText());
     const toonDiagnostics = validateToonBlocks(blocks, document);
-    const diagnostics = toonDiagnostics.map((diag) =>
-      new vscode.Diagnostic(diag.range, diag.message, mapSeverity(diag.severity))
+    const diagnostics = toonDiagnostics.map(
+      (diag) => new vscode.Diagnostic(diag.range, diag.message, mapSeverity(diag.severity))
     );
     collection.set(document.uri, diagnostics);
   } catch (error) {
@@ -67,7 +81,7 @@ export function validateToonBlocks(
       diagnostics.push({
         message: `Row count mismatch. Declared ${block.rowCountDeclared}, found ${block.rows.length}.`,
         severity: 'error',
-        range: lineRange(document, block.headerLine)
+        range: lineRange(document, block.headerLine),
       });
     }
 
@@ -76,7 +90,7 @@ export function validateToonBlocks(
       diagnostics.push({
         message: `Duplicate field names: ${duplicateFields.join(', ')}`,
         severity: 'warning',
-        range: fieldRange(document, block.headerLine)
+        range: fieldRange(document, block.headerLine),
       });
     }
 
@@ -85,13 +99,24 @@ export function validateToonBlocks(
         diagnostics.push({
           message: `Expected ${block.fields.length} values, found ${row.values.length}.`,
           severity: 'error',
-          range: lineRange(document, row.line)
+          range: lineRange(document, row.line),
         });
       }
     }
   }
 
   return diagnostics;
+}
+
+export function mapSeverity(severity: ToonDiagnosticSeverity): vscode.DiagnosticSeverity {
+  switch (severity) {
+    case 'warning':
+      return vscode.DiagnosticSeverity.Warning;
+    case 'info':
+      return vscode.DiagnosticSeverity.Information;
+    case 'error':
+      return vscode.DiagnosticSeverity.Error;
+  }
 }
 
 function fieldRange(document: vscode.TextDocument, line: number): vscode.Range {
@@ -120,16 +145,4 @@ function getDuplicateFields(fields: string[]): string[] {
     }
   });
   return Array.from(duplicates.values());
-}
-
-function mapSeverity(severity: ToonDiagnosticSeverity): vscode.DiagnosticSeverity {
-  switch (severity) {
-    case 'warning':
-      return vscode.DiagnosticSeverity.Warning;
-    case 'info':
-      return vscode.DiagnosticSeverity.Information;
-    case 'error':
-    default:
-      return vscode.DiagnosticSeverity.Error;
-  }
 }

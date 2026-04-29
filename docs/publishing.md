@@ -1,30 +1,59 @@
-# Publishing Guide
+# Publishing TOON Tools
 
-## GitHub Publishing Checklist
+Publishing uses Doppler for registry tokens and supports both VS Code Marketplace and Open VSX.
+
+Required Doppler project/config:
+
+- Project: `vscode-toon-tools`
+- Config: `main`
+
+Required secrets:
+
+- `VSCE_PAT`
+- `OVSX_PAT`
+- `CODECOV_TOKEN`
+
+## Local Verification
+
+Run the full local gate before publishing:
 
 ```bash
-git init
-git add .
-git commit -m "Initial TOON VS Code extension"
-git branch -M main
-git remote add origin git@github.com:oaslananka/vscode-toon-tools.git
-# or
-# git remote add origin https://github.com/oaslananka/vscode-toon-tools.git
-git push -u origin main
+npm ci
+npm run check:ci
+code --install-extension vscode-toon-tools-1.0.0.vsix
 ```
 
-## VS Code Marketplace (Placeholder)
+Review package contents:
 
-1. Install `vsce` and ensure `publisher` is `oaslananka`.
-2. Create a Personal Access Token with the `Marketplace` scope.
-3. Package locally:
+```bash
+npm run package:ls
+```
 
-   ```bash
-   vsce package
-   ```
+## Publish
 
-4. Publish once credentials are configured:
+Preferred path:
 
-   ```bash
-   vsce publish
-   ```
+```bash
+doppler run --project vscode-toon-tools --config main -- bash scripts/publish.sh
+```
+
+Manual commands:
+
+```bash
+doppler run --project vscode-toon-tools --config main -- npx vsce publish --no-dependencies
+doppler run --project vscode-toon-tools --config main -- npx ovsx publish --pat "$OVSX_PAT"
+```
+
+## Release Workflow
+
+The LAB repository owns automated GitHub Actions:
+
+```bash
+gh workflow run release.yml \
+  --repo oaslananka-LAB/vscode-toon-tools \
+  --field version=v1.0.0 \
+  --field publish=false
+```
+
+Use `publish=true` only when intentionally publishing through GitHub Actions, and set
+`approval=APPROVE_RELEASE`.
