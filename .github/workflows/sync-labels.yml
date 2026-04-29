@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   sync-labels:
-    if: github.repository == 'oaslananka-LAB/vscode-toon-tools'
+    if: github.repository == 'oaslananka-lab/vscode-toon-tools'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

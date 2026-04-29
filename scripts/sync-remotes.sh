@@ -3,7 +3,7 @@ set -euo pipefail
 
 REPO_NAME="vscode-toon-tools"
 OWNER="oaslananka"
-ORG="oaslananka-LAB"
+ORG="oaslananka-lab"
 
 if ! git remote | grep -q '^lab$'; then
   git remote add lab "https://github.com/${ORG}/${REPO_NAME}.git"

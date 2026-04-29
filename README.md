@@ -2,8 +2,8 @@
 
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/oaslananka.vscode-toon-tools?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=oaslananka.vscode-toon-tools)
 [![Open VSX](https://img.shields.io/open-vsx/v/oaslananka/vscode-toon-tools?label=Open%20VSX)](https://open-vsx.org/extension/oaslananka/vscode-toon-tools)
-[![CI](https://github.com/oaslananka-LAB/vscode-toon-tools/actions/workflows/ci.yml/badge.svg)](https://github.com/oaslananka-LAB/vscode-toon-tools/actions/workflows/ci.yml)
-[![Codecov](https://codecov.io/gh/oaslananka-LAB/vscode-toon-tools/branch/main/graph/badge.svg)](https://codecov.io/gh/oaslananka-LAB/vscode-toon-tools)
+[![CI](https://github.com/oaslananka-lab/vscode-toon-tools/actions/workflows/ci.yml/badge.svg)](https://github.com/oaslananka-lab/vscode-toon-tools/actions/workflows/ci.yml)
+[![Codecov](https://codecov.io/gh/oaslananka-lab/vscode-toon-tools/branch/main/graph/badge.svg)](https://codecov.io/gh/oaslananka-lab/vscode-toon-tools)
 
 > Token-Oriented Object Notation support: syntax highlighting, formatting, linting,
 > intelligent editing, previews, table viewer, and dual-marketplace publishing.

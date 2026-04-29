@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 
 $repoName = 'vscode-toon-tools'
 $owner = 'oaslananka'
-$org = 'oaslananka-LAB'
+$org = 'oaslananka-lab'
 
 $remotes = git remote
 if ($remotes -notcontains 'lab') {

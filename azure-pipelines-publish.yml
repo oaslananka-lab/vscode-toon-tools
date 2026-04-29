@@ -46,7 +46,7 @@ stages:
               instructions: |
                 Review the packaged VSIX artifact.
                 Azure DevOps pipeline is manual fallback only.
-                Primary automated CI/CD is in the oaslananka-LAB GitHub org.
+                Primary automated CI/CD is in the oaslananka-lab GitHub org.
               onTimeout: reject
 
   - stage: Publish

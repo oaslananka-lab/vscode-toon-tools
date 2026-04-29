@@ -50,7 +50,7 @@ The LAB repository owns automated GitHub Actions:
 
 ```bash
 gh workflow run release.yml \
-  --repo oaslananka-LAB/vscode-toon-tools \
+  --repo oaslananka-lab/vscode-toon-tools \
   --field version=v1.0.0 \
   --field publish=false
 ```
