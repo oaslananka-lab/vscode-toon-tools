@@ -54,8 +54,10 @@ jobs:
         with:
           subject-path: '*.vsix'
       - name: Install Doppler CLI
+        if: inputs.publish == 'true'
         uses: dopplerhq/cli-action@v3
       - name: Verify Doppler secrets
+        if: inputs.publish == 'true'
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
         run: bash scripts/verify-doppler-secrets.sh
