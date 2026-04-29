@@ -69,9 +69,33 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ inputs.version }}
+          PUBLISH_RELEASE: ${{ inputs.publish }}
         run: |
-          gh_args=(--repo "${{ github.repository }}" --title "${{ inputs.version }}" --generate-notes)
-          [ "${{ inputs.publish }}" != "true" ] && gh_args+=(--draft)
+          set -euo pipefail
+          repo="${{ github.repository }}"
+          draft=false
+          [ "$PUBLISH_RELEASE" != "true" ] && draft=true
+
           assets=()
           compgen -G "*.vsix" > /dev/null && assets+=(*.vsix)
-          gh release create "${{ inputs.version }}" "${gh_args[@]}" "${assets[@]}"
+
+          release_id="$(gh api "repos/$repo/releases/tags/$RELEASE_TAG" --jq '.id' 2>/dev/null || true)"
+          if [ -z "$release_id" ]; then
+            gh api -X POST "repos/$repo/releases" \
+              -f tag_name="$RELEASE_TAG" \
+              -f target_commitish="$GITHUB_SHA" \
+              -f name="$RELEASE_TAG" \
+              -F draft="$draft" \
+              -F generate_release_notes=true >/dev/null
+          else
+            gh api -X PATCH "repos/$repo/releases/$release_id" \
+              -f target_commitish="$GITHUB_SHA" \
+              -f name="$RELEASE_TAG" \
+              -F draft="$draft" \
+              -F generate_release_notes=true >/dev/null
+          fi
+
+          if [ "${#assets[@]}" -gt 0 ]; then
+            gh release upload "$RELEASE_TAG" "${assets[@]}" --repo "$repo" --clobber
+          fi
